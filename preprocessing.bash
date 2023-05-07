@@ -122,11 +122,15 @@ elif [[ $genome == "mm" ]]
 then
   echo "Blacklist regions are Ensembl genome. This will not work if the genome used for alignment is from UCSC."
   bl=""$pdir"/mm10-blacklist.v2.ensembl.bed"
+elif [[ $genome == "danRer" ]]
+then
+  echo "Blacklist regions are Ensembl genome. This will not work if the genome used for alignment is from UCSC."
+  bl=""$pdir"/danRer11-blacklist-stripped.rmsk.bed"
 else
   echo "Only human and mouse genome blacklists are supported for now. Blacklist regions are Ensembl genome. This will not work if the genome used for alignment is from UCSC. If not mouse or human, will skip removing blacklist regions."
 fi
 
-if [[ $genome == "hg" ]] || [[ $genome == "mm" ]]
+if [[ $genome == "hg" ]] || [[ $genome == "mm" ]] || [[ $genome == "danRer" ]]
 then
 	for i in $chrList
 	do
