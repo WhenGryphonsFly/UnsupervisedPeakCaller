@@ -48,6 +48,7 @@ fi
 
 #step 1 - get necessary count files
 #step 1.0: define chromosome numbers
+#[^K] matches entries that do not start with K; all unplaced regions in danRer11 start with K, so these are removed here.
 chrList=`samtools view -H "$indir"/"$mergedBam" | grep -P "SN:[^K]" | cut -f 2 | sed 's/SN://g'`
 
 
