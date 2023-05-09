@@ -48,7 +48,7 @@ done < $path/chrList.txt
 done
 
 echo "Number of reps ${nreps}, start training"
-python main.py --epochs $epoch --batch_size $batch --datapath $path --n_rep $nreps --modelpath $path/rcl.ckpt &> $path/out.err
+python main.py --epochs $epoch --batch_size $batch --datapath $path --n_rep $nreps --modelpath $path/rcl.ckpt #&> $path/out.err
 echo "Finish training, start writing results (if your data is large, please give more memory)"
 
 while read j; do
@@ -57,7 +57,7 @@ done < $path/chrList.txt
 
 cat $path/rcl_*bed > $path/rcl.bed
 rm $path/rcl_*bed 
-rm $path/out.err
+#rm $path/out.err
 
 nreps=0
 for i in $fname

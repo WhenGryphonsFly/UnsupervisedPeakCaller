@@ -48,7 +48,8 @@ fi
 
 #step 1 - get necessary count files
 #step 1.0: define chromosome numbers
-chrList=`samtools view -H "$indir"/"$mergedBam" | grep "SN:" | cut -f 2 | sed 's/SN://g'`
+#[^K] matches entries that do not start with K; all unplaced regions in danRer11 start with K, so these are removed here.
+chrList=`samtools view -H "$indir"/"$mergedBam" | grep -P "SN:[^K]" | cut -f 2 | sed 's/SN://g'`
 
 
 #step 1.1: get bga genomecov of the data
@@ -112,8 +113,15 @@ then
 	echo ${arr[$m-2]} ${arr[$m-1]} | sed 's/ /\n/g' | parallel "Rscript --vanilla \"$pdir\"/getCountFiles.R \"$outdir\"/chr{}/temp{}.txt \"$inputLn\" \"$outdir\"/chr{}/{}regions.txt"
 fi
 
+#step 3.1: remove out-of-bounds segments
+for i in $chrList
+do
+	maximumBp=`tail -n 1 "$outdir"/"$i"_"$prefix"_merged-bga.begGraph | awk -F '\t' '{print $3}'` # Get the length of the chromosome
+	# sort removes duplicate lines (even if they aren't adjacent), sed removes negative start positions, awk removes end positions greater than the chromosome length
+	tail -n +2 "$outdir"/chr"$i"/"$i"regions.txt | sort -k2 -nu | sed '/-/d' | awk -F '\t' "\$3<=$maximumBp" > "$outdir"/chr"$i"/"$i"regions1.txt
+done
 
-#step 3.1: remove blacklist
+#step 3.2: remove blacklist
 if [[ $genome == "hg" ]] || [[ $genome == "hg38" ]]
 then
   echo "Blacklist regions are Ensembl genome. This will not work if the genome used for alignment is from UCSC."
@@ -126,20 +134,24 @@ elif [[ $genome == "mm" ]]
 then
   echo "Blacklist regions are Ensembl genome. This will not work if the genome used for alignment is from UCSC."
   bl=""$pdir"/mm10-blacklist.v2.ensembl.bed"
+elif [[ $genome == "danRer" ]]
+then
+  echo "Blacklist regions are Ensembl genome. This will not work if the genome used for alignment is from UCSC."
+  bl=""$pdir"/danRer11-blacklist-stripped.rmsk.bed"
 else
   echo "Only human and mouse genome blacklists are supported for now. Blacklist regions are Ensembl genome. This will not work if the genome used for alignment is from UCSC. If not mouse or human, will skip removing blacklist regions."
 fi
 
-if [[ $genome == "hg" ]] || [[ $genome == "mm" ]] || [[ $genome == "hg38" ]] || [[ $genome == "hg19" ]]
+if [[ $genome == "hg" ]] || [[ $genome == "mm" ]] || [[ $genome == "hg38" ]] || [[ $genome == "hg19" ]] || [[ $genome == "danRer" ]]
 then
 	for i in $chrList
 	do
-		tail -n +2 "$outdir"/chr"$i"/"$i"regions.txt | sed 's/chr//g' | bedtools intersect -v -a - -b "$bl" > "$outdir"/chr"$i"/"$i"regions2.txt
+		cat "$outdir"/chr"$i"/"$i"regions1.txt | sed 's/chr//g' | bedtools intersect -v -a - -b "$bl" > "$outdir"/chr"$i"/"$i"regions2.txt
 	done
 else
         for i in $chrList
         do
-                tail -n +2 "$outdir"/chr"$i"/"$i"regions.txt | sed 's/chr//g' > "$outdir"/chr"$i"/"$i"regions2.txt
+                cat "$outdir"/chr"$i"/"$i"regions1.txt | sed 's/chr//g' > "$outdir"/chr"$i"/"$i"regions2.txt
         done
 fi
 
@@ -174,3 +186,4 @@ Rscript --vanilla "$pdir"/bigInputs.R "$outdir"/chrList.txt "$outdir"
 rm "$outdir"/*-bga.begGraph
 rm "$outdir"/chr*/*.bam-temp.txt
 rm "$outdir"/chr*/*regions.txt
+rm "$outdir"/chr*/*regions1.txt
